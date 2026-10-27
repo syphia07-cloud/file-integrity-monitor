@@ -1,0 +1,8 @@
+{
+    "monitored_folders": [
+        {"path": "lab", "severity": "normal"},
+        {"path": "~/Downloads", "severity": "critical"}
+    ],
+    "ignore_patterns": ["*.tmp", "*.crdownload", "*.part", "~$*"],
+    "ignore_folders": [".git", "__pycache__", "node_modules"]
+}

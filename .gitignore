@@ -1,3 +1,5 @@
 baseline.json
 baseline.json.sig
 fim.log
+fim.db
+__pycache__/
