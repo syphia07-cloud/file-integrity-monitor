@@ -1,6 +1,6 @@
 from flask import Flask, jsonify, render_template, request
 
-from database import count_by_type, get_events, init_db
+from database import count_by_type, get_events, init_db, verify_events
 
 app = Flask(__name__)
 
@@ -20,6 +20,12 @@ def api_events():
 @app.route("/api/stats")
 def api_stats():
     return jsonify(count_by_type())
+
+
+@app.route("/api/integrity")
+def api_integrity():
+    ok, checked, message = verify_events()
+    return jsonify({"ok": ok, "checked": checked, "message": message})
 
 
 if __name__ == "__main__":

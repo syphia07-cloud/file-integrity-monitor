@@ -7,6 +7,10 @@
   body { font-family: Segoe UI, Arial, sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; padding: 20px; }
   h1 { margin: 0 0 4px; }
   .sub { color: #94a3b8; margin-bottom: 20px; }
+  .integrity { padding: 10px 14px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; }
+  .integrity.wait { background: #334155; }
+  .integrity.ok { background: #14532d; }
+  .integrity.bad { background: #7f1d1d; font-weight: bold; }
   .cards { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
   .card { background: #1e293b; border-radius: 8px; padding: 14px 20px; min-width: 110px; }
   .card .n { font-size: 28px; font-weight: bold; }
@@ -22,6 +26,7 @@
   th { color: #94a3b8; }
   .ADDED { color: #4ade80; } .MODIFIED { color: #facc15; }
   .DELETED { color: #f87171; } .MOVED { color: #60a5fa; }
+  .BURST { color: #c084fc; }
   .critical { background: #7f1d1d; padding: 2px 8px; border-radius: 10px; }
   .normal { background: #334155; padding: 2px 8px; border-radius: 10px; }
 </style>
@@ -29,6 +34,8 @@
 <body>
   <h1>File Integrity Monitor</h1>
   <div class="sub">Live dashboard, refreshes every 3 seconds</div>
+
+  <div class="integrity wait" id="integrity">Checking event integrity...</div>
 
   <div class="cards" id="cards"></div>
   <div class="chart" id="chart"></div>
@@ -40,7 +47,7 @@
   </table>
 
 <script>
-  const COLORS = { ADDED: "#4ade80", MODIFIED: "#facc15", DELETED: "#f87171", MOVED: "#60a5fa" };
+  const COLORS = { ADDED: "#4ade80", MODIFIED: "#facc15", DELETED: "#f87171", MOVED: "#60a5fa", BURST: "#c084fc" };
   let allEvents = [];
   let stats = {};
 
@@ -64,6 +71,20 @@
       drawTable();
     } catch (e) {
       console.error("Load failed:", e);
+    }
+  }
+
+  async function loadIntegrity() {
+    const box = document.getElementById("integrity");
+    try {
+      const r = await fetch("/api/integrity").then(x => x.json());
+      box.className = "integrity " + (r.ok ? "ok" : "bad");
+      box.textContent = r.ok
+        ? "Integrity verified: " + r.checked + " events, all signatures valid"
+        : "TAMPERING DETECTED: " + r.message;
+    } catch (e) {
+      box.className = "integrity wait";
+      box.textContent = "Integrity check unavailable";
     }
   }
 
@@ -115,7 +136,9 @@
   }
 
   load();
+  loadIntegrity();
   setInterval(load, 3000);
+  setInterval(loadIntegrity, 15000);
 </script>
 </body>
 </html>
