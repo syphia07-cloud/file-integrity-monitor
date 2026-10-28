@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>FIM Dashboard</title>
+<style>
+  body { font-family: Segoe UI, Arial, sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; padding: 20px; }
+  h1 { margin: 0 0 4px; }
+  .sub { color: #94a3b8; margin-bottom: 20px; }
+  .cards { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+  .card { background: #1e293b; border-radius: 8px; padding: 14px 20px; min-width: 110px; }
+  .card .n { font-size: 28px; font-weight: bold; }
+  .card .t { color: #94a3b8; font-size: 13px; }
+  .chart { background: #1e293b; border-radius: 8px; padding: 14px; margin-bottom: 20px; }
+  .row { display: flex; align-items: center; margin: 6px 0; }
+  .label { width: 100px; font-size: 14px; }
+  .bar { height: 18px; border-radius: 4px; min-width: 2px; }
+  .count { margin-left: 8px; font-size: 14px; }
+  input { padding: 8px; width: 320px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: #e2e8f0; margin-bottom: 10px; }
+  table { width: 100%; border-collapse: collapse; background: #1e293b; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #334155; font-size: 14px; word-break: break-all; }
+  th { color: #94a3b8; }
+  .ADDED { color: #4ade80; } .MODIFIED { color: #facc15; }
+  .DELETED { color: #f87171; } .MOVED { color: #60a5fa; }
+  .critical { background: #7f1d1d; padding: 2px 8px; border-radius: 10px; }
+  .normal { background: #334155; padding: 2px 8px; border-radius: 10px; }
+</style>
+</head>
+<body>
+  <h1>File Integrity Monitor</h1>
+  <div class="sub">Live dashboard, refreshes every 3 seconds</div>
+
+  <div class="cards" id="cards"></div>
+  <div class="chart" id="chart"></div>
+
+  <input id="search" placeholder="Search file name or event type..." oninput="drawTable()">
+  <table>
+    <thead><tr><th>Time</th><th>Event</th><th>Severity</th><th>File</th><th>Hash (first 12)</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+
+<script>
+  const COLORS = { ADDED: "#4ade80", MODIFIED: "#facc15", DELETED: "#f87171", MOVED: "#60a5fa" };
+  let allEvents = [];
+  let stats = {};
+
+  // textContent is used everywhere, so a malicious file name cannot inject HTML
+  function el(tag, text, cls) {
+    const e = document.createElement(tag);
+    if (text !== undefined) e.textContent = text;
+    if (cls) e.className = cls;
+    return e;
+  }
+
+  async function load() {
+    try {
+      const [events, st] = await Promise.all([
+        fetch("/api/events?limit=200").then(r => r.json()),
+        fetch("/api/stats").then(r => r.json()),
+      ]);
+      allEvents = events;
+      stats = st;
+      drawStats();
+      drawTable();
+    } catch (e) {
+      console.error("Load failed:", e);
+    }
+  }
+
+  function drawStats() {
+    const cards = document.getElementById("cards");
+    const chart = document.getElementById("chart");
+    cards.replaceChildren();
+    chart.replaceChildren();
+
+    const total = Object.values(stats).reduce((a, b) => a + b, 0);
+    const items = [["TOTAL", total], ...Object.entries(stats)];
+    for (const [name, n] of items) {
+      const c = el("div", undefined, "card");
+      c.appendChild(el("div", String(n), "n " + name));
+      c.appendChild(el("div", name, "t"));
+      cards.appendChild(c);
+    }
+
+    const max = Math.max(1, ...Object.values(stats));
+    chart.appendChild(el("div", "Events by type"));
+    for (const [name, n] of Object.entries(stats)) {
+      const row = el("div", undefined, "row");
+      row.appendChild(el("div", name, "label"));
+      const bar = el("div", undefined, "bar");
+      bar.style.width = (n / max * 300) + "px";
+      bar.style.background = COLORS[name] || "#94a3b8";
+      row.appendChild(bar);
+      row.appendChild(el("div", String(n), "count"));
+      chart.appendChild(row);
+    }
+  }
+
+  function drawTable() {
+    const q = document.getElementById("search").value.toLowerCase();
+    const body = document.getElementById("rows");
+    body.replaceChildren();
+    for (const e of allEvents) {
+      if (q && !(e.path.toLowerCase().includes(q) || e.event_type.toLowerCase().includes(q))) continue;
+      const tr = document.createElement("tr");
+      tr.appendChild(el("td", e.time));
+      tr.appendChild(el("td", e.event_type, e.event_type));
+      const sev = el("td");
+      sev.appendChild(el("span", e.severity, e.severity));
+      tr.appendChild(sev);
+      tr.appendChild(el("td", e.path));
+      tr.appendChild(el("td", (e.file_hash || "").slice(0, 12)));
+      body.appendChild(tr);
+    }
+  }
+
+  load();
+  setInterval(load, 3000);
+</script>
+</body>
+</html>
