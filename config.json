@@ -4,5 +4,10 @@
         {"path": "~/Downloads", "severity": "critical"}
     ],
     "ignore_patterns": ["*.tmp", "*.crdownload", "*.part", "~$*"],
-    "ignore_folders": [".git", "__pycache__", "node_modules"]
+    "ignore_folders": [".git", "__pycache__", "node_modules"],
+    "burst_detection": {
+        "threshold": 20,
+        "window_seconds": 10,
+        "cooldown_seconds": 60
+    }
 }
