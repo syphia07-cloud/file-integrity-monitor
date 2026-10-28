@@ -4,6 +4,7 @@ import time
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
+from alerts import send_alert
 from config import load_config, should_ignore
 from database import add_event, init_db
 from fim import hash_file
@@ -42,6 +43,9 @@ class FimHandler(FileSystemEventHandler):
 
         add_event(event_type, path, file_hash, self.severity)
         print(f"[{event_type}] ({self.severity}) {path}")
+
+        if self.severity == "critical":
+            send_alert(event_type, path, self.severity)
 
     def on_created(self, event):
         if not event.is_directory:
